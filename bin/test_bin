@@ -1,0 +1,4 @@
+objdump -D -b binary -mi386:x86-64 -M intel --no-show-raw-insn test_$1.bin |
+    tail -n +8 | cut -f 2-10 >  test_$1_d.asm
+
+diff test_$1.asm test_$1_d.asm
