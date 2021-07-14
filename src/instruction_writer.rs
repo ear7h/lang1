@@ -68,6 +68,11 @@ impl InstructionWriter {
         self.sections.last_mut().unwrap().1.push(d);
     }
 
+    pub fn push_16(&mut self, d: u16) {
+        self.push_8(d as u8);
+        self.push_8((d >> 8)  as u8);
+    }
+
     pub fn push_32(&mut self, d: u32) {
         self.push_8(d as u8);
         self.push_8((d >> 8)  as u8);

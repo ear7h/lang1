@@ -1,2 +1,4 @@
 /target
 .bash_history
+*.asm
+*.bin

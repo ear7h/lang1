@@ -3,13 +3,10 @@
 
 use std::io;
 
-use crate::{
-    asm::Function,
-    instruction_writer::{
-        InstructionWriter,
-        Section,
-        RelRow,
-    },
+use crate::instruction_writer::{
+    InstructionWriter,
+    Section,
+    RelRow,
 };
 
 
@@ -50,16 +47,6 @@ pub enum Mn {
     JNZ, // aka JNE
 }
 
-
-impl Mn {
-    /// the encodings for this instruction are like ADD
-    /// ex. ADC, AND, OR, etc
-    fn is_add_like(&self) -> bool {
-        true
-    }
-}
-
-
 #[derive(Debug, Clone, Copy)]
 pub enum Imm {
     Bits8(u8),
@@ -95,14 +82,19 @@ impl Instr {
             Mn::XOR => Some(0x38),
             _ => None,
         } {
-            match self.operands {
-                Opr::I(Imm::Bits32(op2)) => {
-                    w.push_8(op_code | 0b101);
-                    w.push_32(op2);
-                },
+            return match self.operands {
                 Opr::I(Imm::Bits8(op2)) => {
                     w.push_8(op_code | 0b100);
                     w.push_8(op2);
+                },
+                Opr::I(Imm::Bits16(op2)) => {
+                    w.push_8(PREFIX_OP_SIZE);
+                    w.push_8(op_code | 0b101);
+                    w.push_16(op2);
+                },
+                Opr::I(Imm::Bits32(op2)) => {
+                    w.push_8(op_code | 0b101);
+                    w.push_32(op2);
                 },
                 Opr::MI((rm_reg, imm), Imm::Bits8(op2)) => {
                     let flag =  if rm_reg.size() > RegSize::Bits8 {
@@ -113,7 +105,13 @@ impl Instr {
 
                     enc_add_reg_rm(w, op_code | flag, RegOrExt::Ext(0), (rm_reg, imm));
                     w.push_8(op2);
-                }
+                },
+                Opr::MI((rm_reg, imm), Imm::Bits16(op2)) => {
+                    assert!(rm_reg.size() >= RegSize::Bits16);
+
+                    enc_add_reg_rm(w, op_code, RegOrExt::Ext(0), (rm_reg, imm));
+                    w.push_16(op2);
+                },
                 Opr::MI((rm_reg, imm), Imm::Bits32(op2)) => {
                     assert!(rm_reg.size() >= RegSize::Bits32);
 
@@ -126,17 +124,14 @@ impl Instr {
                 Opr::MR(mem, reg) => {
                     enc_add_reg_rm(w, op_code, RegOrExt::Reg(reg), mem);
                 },
-                _ => {
-                    panic!("not implemented")
-                }
             }
-            return;
         }
 
         panic!("not implemented")
     }
 }
 
+#[derive(Debug)]
 pub enum RegOrExt {
     Reg(Reg),
     Ext(u8),
@@ -194,7 +189,8 @@ fn enc_add_reg_rm(
     }
     */
 
-    if reg.try_reg().map_or(false, |r| r.size() == RegSize::Bits16) {
+    println!("reg: {:?}", reg);
+    if reg.try_reg().map_or(rm.0.size(), |r| r.size()) == RegSize::Bits16 {
         dst.push_8(PREFIX_OP_SIZE);
     }
 
@@ -572,9 +568,17 @@ mod test {
                 name: "add    eax,0xbeef",
                 instr: Instr{
                     mnemonic: Mn::ADD,
-                    operands: Opr::I(Imm::Bits32(0xbeef)),
+                    operands: Opr::I(Imm::Bits32(0xdeadbeef)),
                 },
-                bin: &[0x05, 0xef, 0xbe, 0x00, 0x00],
+                bin: &[0x05, 0xef, 0xbe, 0xad, 0xde],
+            },
+            Tcase{
+                name: "add    ax,0xbbbb",
+                instr: Instr{
+                    mnemonic: Mn::ADD,
+                    operands: Opr::I(Imm::Bits16(0xbeef)),
+                },
+                bin: &[0x66, 0x05, 0xef, 0xbe],
             },
             Tcase{
                 name: "add    al,0xbb",
@@ -593,6 +597,16 @@ mod test {
                         Imm::Bits8(0xbb)),
                 },
                 bin: &[0x80, 0xc0, 0xbb],
+            },
+            Tcase{
+                name: "add    ax,0xbb", // dual
+                instr: Instr{
+                    mnemonic: Mn::ADD,
+                    operands: Opr::MI(
+                        (Reg::AX, AddrMod::Direct),
+                        Imm::Bits16(0xbb)),
+                },
+                bin: &[0x66, 0x81, 0xc0, 0xbb, 0x00],
             },
             Tcase{
                 name: "add    eax,0xbb", //imm32 dual
@@ -1168,7 +1182,7 @@ mod test {
             match res {
                 Err(e) => {
                     println!("FAIL {}", tc.name);
-                    panic!(e);
+                    panic!("{:?}", e);
                 },
                 Ok(()) => {
                     assert_eq!(ww.first_section_slice(),
@@ -1199,7 +1213,6 @@ mod test {
         File::create(format!("test_{}.asm", name)).unwrap().write_all(asm.as_bytes()).unwrap();
         bin.write_to(&mut File::create(format!("test_{}.bin", name)).unwrap()).unwrap();
         println!("files written");
-
     }
 
     #[test]
@@ -1261,7 +1274,7 @@ mod test {
             match res {
                 Err(e) => {
                     println!("FAIL {}", tc.name);
-                    panic!(e);
+                    panic!("{:?}", e);
                 },
                 Ok(()) => {
                     assert_eq!(ww.first_section_slice(), tc.bin, "\nfor test: {}\n", tc.name);
@@ -1317,13 +1330,3 @@ mod test {
     }
 }
 
-/*
-struct X86 {}
-
-impl Arch for X86 {
-    fn encode<W : io::Write>(f : &Function) -> Result<()> {
-        panic!()
-    }
-}
-
-*/
