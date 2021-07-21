@@ -1,6 +1,10 @@
+#![allow(dead_code)]
+
 // reexports
 pub mod x86_64;
+mod x86_64_tests;
 
+/*
 use crate::{
     ir,
     instruction_writer::InstructionWriter,
@@ -134,4 +138,4 @@ trait RegisterAllocation {
     fn register_pressure(&self) -> usize;
     fn register_for(name: &str) -> usize;
 }
-
+*/

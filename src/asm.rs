@@ -2,20 +2,20 @@
 
 #[derive(Default)]
 pub(crate) struct Function {
-    name: String,
-    export: bool,
+    name :   String,
+    export : bool,
 
     // local space that is being allocated,
     // note that this is only measured as space and individual
     // items are not listed, the calling convention and alignment
     // rules are handled in the transformation from the ast ir
     // to this ir
-    arg_size: Addr,
-    local_size: Addr,
-    ret_size: Addr,
+    arg_size :   Addr,
+    local_size : Addr,
+    ret_size :   Addr,
 
     // body of the function
-    body: Vec<Instr>,
+    body : Vec<Instr>,
 }
 
 /// a multiple of the address resolution unit
@@ -72,12 +72,12 @@ pub enum Section {
     // conventional global sections
     Global(String),    // RODATA, BSS
     MutGlobal(String), // DATA
-    Function(String),  // TEXT
+    Function(String),  /* TEXT */
 
-                       // TODO(ear7h):
-                       // Context, like odin?
-                       // ThreadLocal ?
-                       // Label(String),
+                       /* TODO(ear7h):
+                        * Context, like odin?
+                        * ThreadLocal ?
+                        * Label(String), */
 }
 
 pub enum Sign {

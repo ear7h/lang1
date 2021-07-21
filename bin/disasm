@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-objdump -D -b binary -mi386:x86-64 -M intel "$@"
+objdump -D -s --x86-asm-syntax intel "$@"

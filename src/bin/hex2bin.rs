@@ -1,7 +1,6 @@
-use std::io::{self, BufRead, Write};
-
 use std::env;
 use std::fs::File;
+use std::io::{self, BufRead, Write};
 
 fn main() -> io::Result<()> {
     let mut args = env::args();
@@ -21,10 +20,12 @@ fn main() -> io::Result<()> {
         line.truncate(line.find("#").unwrap_or(line.len()));
 
         let hexes = line.matches(|c| {
-            (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+            (c >= '0' && c <= '9')
+                || (c >= 'a' && c <= 'f')
+                || (c >= 'A' && c <= 'F')
         });
 
-        let mut buf: [u8; 1] = [0];
+        let mut buf : [u8; 1] = [0];
         let mut parity = false;
 
         for hex in hexes {
@@ -33,7 +34,7 @@ fn main() -> io::Result<()> {
                 true => {
                     buf[0] = (buf[0] << 4) | hex2nibble(hex.as_bytes()[0]);
                     out.write(&buf)?;
-                }
+                },
             }
             parity = !parity;
         }
@@ -49,7 +50,7 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn hex2nibble(b: u8) -> u8 {
+fn hex2nibble(b : u8) -> u8 {
     return match b as char {
         '0' => 0,
         '1' => 1,
@@ -74,5 +75,5 @@ fn hex2nibble(b: u8) -> u8 {
         'e' => 14,
         'f' => 15,
         _ => 0,
-    };
+    }
 }

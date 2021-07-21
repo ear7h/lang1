@@ -1,8 +1,8 @@
-
+#![allow(dead_code)]
 
 pub struct Function {
-    pub name: String,
-    pub public: bool,
+    pub name :   String,
+    pub public : bool,
 
     /// function params
     pub params : Vec<(String, u64)>, // Vec<(name, size)>
@@ -29,7 +29,6 @@ impl Function {
         panic!("variable does not exist: {}", name);
     }
 }
-
 
 pub enum Operation {
     Call(Val, Vec<Val>),
