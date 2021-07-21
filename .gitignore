@@ -2,3 +2,5 @@
 .bash_history
 *.asm
 *.bin
+*.o
+*.out
