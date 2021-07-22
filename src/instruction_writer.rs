@@ -1,9 +1,8 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
-use std::{
-    fs::File,
-};
+use std::fs::File;
+use std::cell::Cell;
 
 use faerie;
 
@@ -17,6 +16,7 @@ pub struct Reloc {
     pub at : usize,
     pub to : String,
 }
+
 
 pub trait Endian {
     fn from_le(le : &mut [u8]) -> &mut [u8];
@@ -40,23 +40,17 @@ impl Endian for BigEndian {
 }
 
 #[cfg(test)]
-pub fn mock_function_writer<'a, E : Endian>(
-    sym : &'a str,
-    instrs : &'a mut Vec<u8>,
-    relocs : &'a mut Vec<Reloc>,
-) -> FunctionWriter<'a, E> {
+pub fn mock_function_writer<E : Endian>() -> FunctionWriter<E> {
     FunctionWriter::<E> {
-        sym,
-        instrs,
-        relocs,
+        instrs : Vec::new(),
+        relocs : Vec::new(),
         _endian : Default::default(),
     }
 }
 
-pub struct FunctionWriter<'a, E> {
-    sym :     &'a str,
-    instrs :  &'a mut Vec<u8>,
-    relocs :  &'a mut Vec<Reloc>,
+pub struct FunctionWriter<E> {
+    instrs :  Vec<u8>,
+    relocs :  Vec<Reloc>,
     _endian : std::marker::PhantomData<E>,
 }
 
@@ -65,7 +59,24 @@ pub struct FunctionWriterState {
     relocs : usize,
 }
 
-impl<E : Endian> FunctionWriter<'_, E> {
+impl<E : Endian> FunctionWriter<E> {
+
+    /// (<>)
+    pub fn extend(&mut self, other : &mut Self) {
+        let l = self.instrs.len();
+        self.instrs.append(&mut other.instrs);
+
+        for mut reloc in other.relocs.drain(..) {
+            reloc.at += l;
+            self.relocs.push(reloc)
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.instrs.clear();
+        self.relocs.clear();
+    }
+
     pub fn push_bytes(&mut self, b : &[u8]) {
         for v in b.iter().copied() {
             self.instrs.push(v)
@@ -91,6 +102,7 @@ impl<E : Endian> FunctionWriter<'_, E> {
             .extend_from_slice(E::from_le(&mut x.to_le_bytes()))
     }
 
+
     /// assumes 4 byte address
     pub fn push_reloc(&mut self, to : String) {
         self.relocs.push(Reloc {
@@ -110,17 +122,23 @@ impl<E : Endian> FunctionWriter<'_, E> {
         self.instrs.truncate(state.instrs);
         self.relocs.truncate(state.relocs);
     }
+
+    pub fn parts(self) -> (Vec<u8>, Vec<Reloc>) {
+        (self.instrs, self.relocs)
+    }
 }
 
 pub struct ObjectWriter {
     artifact : faerie::Artifact,
     relocs :   Vec<Reloc>,
+    relocs_buf :   Cell<Vec<Reloc>>,
 }
 
 impl ObjectWriter {
     pub fn new(artifact : faerie::Artifact) -> Self {
         Self{
-            relocs : Vec::new(),
+            relocs : Default::default(),
+            relocs_buf : Default::default(),
             artifact,
         }
     }
@@ -130,29 +148,26 @@ impl ObjectWriter {
         self.artifact.write(f)
     }
 
-    pub fn func<'a, F, T>(&'a mut self, name : String, f : F) -> T
+    pub fn func<F, T>(&mut self, name : String, f : F) -> T
     where
         F : FnOnce(&mut FunctionWriter<LittleEndian>) -> T,
     {
-        // TODO: put these buffers in Self
-        let mut instrs = Vec::new();
-        let mut relocs = Vec::new();
+
 
         let mut fw = FunctionWriter {
-            sym :     &name,
-            instrs :  &mut instrs,
-            relocs :  &mut relocs,
+            instrs :  Vec::new(),
+            relocs :  self.relocs_buf.take(),
             _endian : Default::default(),
         };
 
         let ret = f(&mut fw);
 
-        for v in relocs {
-            self.relocs.push(v);
-        }
+        self.relocs_buf.set(fw.relocs);
+
+        self.relocs.append(self.relocs_buf.get_mut());
 
         self.artifact
-            .declare_with(&name, faerie::Decl::function().global(), instrs)
+            .declare_with(&name, faerie::Decl::function().global(), fw.instrs)
             .unwrap();
 
         ret

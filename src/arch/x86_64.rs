@@ -187,7 +187,7 @@ impl RegOrExt {
 
 fn enc_add_reg_rm(
     // dst: &mut [u8;16],
-    dst : &mut FunctionWriter<'_, LittleEndian>,
+    dst : &mut FunctionWriter<LittleEndian>,
     op_code : u8,
     // TODO(ear7h) Option<Reg> for SIB addressing without a base
     reg : RegOrExt, // reg or op code extentsion

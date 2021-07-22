@@ -698,15 +698,15 @@ fn test_mnemonic() {
     */
 
     for tc in tcases {
-        let mut instrs = Vec::new();
-        let mut relocs = Vec::new();
-
-        let mut w = mock_function_writer(&tc.name, &mut instrs, &mut relocs);
+        let mut w = mock_function_writer();
 
         let res = panic::catch_unwind(panic::AssertUnwindSafe(|| {
             tc.instr.clone().encode(&mut w);
             // tc.instr.clone().encode(&mut ww);
         }));
+
+        let (instrs, _) = w.parts();
+
         match res {
             Err(e) => {
                 println!("FAIL {}", tc.name);
@@ -727,7 +727,7 @@ fn test_mnemonic() {
 
 fn set_test_marker(
     asm : &mut String,
-    bin : &mut FunctionWriter<'_, LittleEndian>,
+    bin : &mut FunctionWriter<LittleEndian>,
 ) {
     asm.push_str("nop\n");
     asm.push_str("nop\n");
@@ -798,15 +798,14 @@ fn mnemonic_rip_rel() {
     // set_test_marker(&mut s, &mut w);
 
     for tc in tcases {
-        let mut instrs = Vec::new();
-        let mut relocs = Vec::new();
-
-        let mut w = mock_function_writer(&tc.name, &mut instrs, &mut relocs);
+        let mut w = mock_function_writer();
 
         let res =
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 tc.instr.clone().encode(&mut w);
             }));
+
+        let (instrs, relocs) = w.parts();
         match res {
             Err(e) => {
                 println!("FAIL {}", tc.name);
@@ -830,10 +829,7 @@ fn mnemonic_rip_rel() {
 }
 
 fn encode(instr : Instr) {
-    let mut instrs = Vec::new();
-    let mut relocs = Vec::new();
-
-    let mut w = mock_function_writer("encode", &mut instrs, &mut relocs);
+    let mut w = mock_function_writer();
 
     instr.encode(&mut w);
 }
