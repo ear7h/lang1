@@ -9,3 +9,5 @@ edition = "2018"
 [dependencies]
 faerie = "0.16.0"
 target-lexicon = "*"
+peg = "0.7.0"
+quickscope = "0.1.6"
