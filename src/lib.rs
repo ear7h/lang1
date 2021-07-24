@@ -1,5 +1,6 @@
 #![feature(box_patterns)]
 #![feature(box_syntax)]
+#![feature(bindings_after_at)]
 
 pub mod arch;
 pub mod instruction_writer;

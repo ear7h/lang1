@@ -7,6 +7,21 @@ fn reduce() {
     let tests = vec![
         ("10", Expr::Int(10)),
         ("fn (x : int) -> int { x } (10)", Expr::Int(10)),
+        (
+            "fn (x : int) -> (bool, int) { (true, x) } (10)",
+            Expr::Tuple(vec![
+                Expr::Bool(true),
+                Expr::Int(10),
+            ]),
+        ),
+        (
+            "match 10 { 1 -> { true }, 10 -> { false } }",
+            Expr::Bool(false),
+        ),
+        (
+            "match 10 { 1 -> { 2 }, x -> { x } }",
+            Expr::Int(10),
+        ),
     ];
 
     for (tc, exp) in tests {

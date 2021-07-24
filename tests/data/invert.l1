@@ -1,0 +1,12 @@
+let invert = fn (a : text, b : bool) -> bool {
+
+	let aa = a;
+	let bb = b;
+
+	match (aa, bb) {
+		("yes", true) -> { false },
+		("yes", false) -> { true },
+		(_, b') -> { b' },
+	}
+
+} in (invert("yes", true), invert("no", false))

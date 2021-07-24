@@ -4,14 +4,60 @@ use crate::env::Env;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Pattern {
-    Id(String),
+    Var(String),
     Tuple(Vec<Pattern>),
-    Expr(Expr),
     Adt{
         ty : String,
         var : String,
         pat : Box<Pattern>,
     },
+    Bool(bool),
+    Int(i64),
+    Text(String),
+}
+
+impl Pattern {
+    fn try_match<'a, 'b>(
+        &'a self,
+        expr: &'a Expr,
+        env : &mut Env<'a, 'b>,
+    ) -> Result<bool, String>
+    where
+        'a : 'b
+    {
+        match (expr, self) {
+            (Expr::Bool(l), Pattern::Bool(r)) => {
+                Ok(l == r)
+            },
+            (Expr::Int(l), Pattern::Int(r)) => {
+                Ok(l == r)
+            },
+            (Expr::Text(l), Pattern::Text(r)) => {
+                Ok(l == r)
+            },
+            (Expr::Tuple(l), Pattern::Tuple(r)) if l.len() == r.len() => {
+                let matches = l
+                    .iter()
+                    .zip(r.iter())
+                    .map(|(expr, pat)| {
+                        pat.try_match(expr, env)
+                    });
+                for m in matches {
+                    if !m? {
+                        return Ok(false)
+                    }
+                }
+
+                Ok(true)
+            },
+            (_, Pattern::Var(s)) => {
+                env.define(s, expr);
+                Ok(true)
+
+            },
+            _ => Err(format!("incompatible pattern: {:?} {:?}", self, expr))
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -73,26 +119,34 @@ pub enum Expr {
 }
 
 
-pub fn reduce<'a, 'b, 'c>(val : &'a Expr, env : &mut Env<'a, 'b>) -> Result<Expr, String>
+pub fn reduce<'a, 'b>(val : &'a Expr, env : &mut Env<'a, 'b>) -> Result<Expr, String>
 where
     'a : 'b,
-    'c : 'b
 {
     use Expr::*;
 
     match val {
-        Abs{..} | Tuple(..) | Adt{..} |
-        Bool(_) | Int(_)    | Text(_) => Ok(val.clone()),
+        Abs{..} | Adt{..} |
+        Bool(_) | Int(_)  |
+        Text(_) => Ok(val.clone()),
+        Tuple(fields) => {
+            fields
+                .iter()
+                .map(|x| reduce(x, env))
+                .collect::<Result<Vec<_>, _>>()
+                .map(Expr::Tuple)
+        },
         Typed{val, ..} => reduce(val, env),
         App{box f, args} => {
             match reduce(f, env)? {
-                Abs{params, mut body, ..} if params.len() == args.len() => {
+                Abs{params, body, ..} if params.len() == args.len() => {
                     let args : Result<Vec<_>, _>= params
                         .into_iter()
                         .map(|(x, _)| x)
                         .zip(
+
                             args
-                                .into_iter()
+                                .iter()
                                 .map(|arg| reduce(arg, env)) // eager eval
                         )
                         .map(|(name, v)| v.map(|v| (name, v)))
@@ -103,15 +157,30 @@ where
                     let mut env = env.new_frame();
 
                     for (name, expr) in args.iter() {
+                        println!("arg: {:?} {:?}", name, expr);
                         env.define(name, expr);
                     }
 
-                    reduce(&mut body, &mut env)
+                    reduce(&body, &mut env)
                 },
                 f => Err(format!("cannot apply {:?} to {:?}", args, f))
             }
         },
-        Match{..} => todo!(),
+        whole@Match{val, arms} => {
+            let val = reduce(&val, env)?;
+            let mut env = env.new_lifetime();
+
+            for arm in arms {
+                let pat = &arm.0;
+                let body = &arm.1;
+
+                if pat.try_match(&val, &mut env)? {
+                    return reduce(&body, &mut env)
+                }
+            }
+
+            Err(format!("non exhaustive match: {:?}", whole))
+        }
         Let{name, box bound, box val} => {
 
             let bound = reduce(bound, env)?;

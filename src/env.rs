@@ -33,7 +33,7 @@ where
         }
     }
 
-    // TODO: this is ineficient, can probably be removed with interning
+    // TODO: this is inefficient, can probably be removed with interning
     pub fn new_lifetime<'c>(&self) -> Env<'a, 'c>
     where
         'b : 'c

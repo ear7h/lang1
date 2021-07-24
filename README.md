@@ -1,4 +1,4 @@
-# lang1
+ # lang1
 
 More than my first attempt at writing a programming language, but the first to
 be generate code, though it cannot (yet) parse anything.
@@ -22,40 +22,55 @@ syntax version of the instruction. The name and encodings are written to files
 `objdump ... test_xxx.bin` can be `diffed` with that of `test_xxx.asm`
 
 
-## TODO
+## Roadmap
 
-* Clean up test artifacts.
-    - a new `test_artifact_dir` rust function for use in tests that returns
-        `$(git rev-parse --show-toplevel)/test_artifacts` or something (and add
-        test_artifacts to .gitignore)
-    - some functions for naming the test files
-* How to do polyfills, for example a 64 bit add in a 32 bit architecture?
-    - As a transformation pass before Arch?
-        * this will be complicated the Arch needs to have and interface
-            to communicate its op limits
-    - In Arch
-        * this is easier but may not be general enough
-* generating object files
-    - mach-O
-    - ELF
-* A dang parser!
-    - the language parsed would be very simple with only the capabilities
-        of C. And slowly expanded, largely through sugaring, to have some more modern
-        features like interfaces and closures.
-    - parameterized types, type classes, type inference would be awesome but I don't
-        think it would be in scope of this project, not before more architectures are
-        supported.
-* Next architectures/backends (in order)
-    - Z80/Gameboy
-    - RISC-V
-    - arm
-    - others:
-        * brainfuck
-        * C
-        * llvm ir
-* debug information in the object file
-* A virtual machine for the langugage
-* Userspace simulators from the architecture DSLs?
-    - like [rv8](https://web.archive.org/web/20191216112852/https://rv8.io/),
-        it emulates the instruction set and forwards syscalls to the host
-        operating system.
+* [x] - parser
+	* [x] - basic types
+	* [x] - tuples
+	* [ ] - abstract data types
+	* [x] - abstraction
+	* [x] - application
+	* [x] - let binding
+	* [x] - patterns (missing ADTs)
+	* [x] - types (missing ADTs)
+	* [x] - multiple lets
+	* [ ] - pattern lets
+* [ ] - string interning
+* [x] - interpreter
+	* [x] - values
+	* [x] - beta reduction (function calling)
+	* [x] - pattern matching
+	* [x] - let bindings
+	* [ ] - multiple lets
+	* [ ] - pattern lets
+* [ ] - type check
+	* [ ] - basic types
+	* [ ] - patterns
+	* [ ] - sizing
+	* [ ] - match arm consitency
+	* [ ] - match exhaustiveness
+	* [ ] - polymorphism
+	* [ ] - type inference
+* [ ] - pointers?
+	* [ ] - requires some level of polymorphism
+* [ ] - optimizer
+	* [ ] - transform local shadowing into mutability
+	* [ ] - automatically demote args to references
+
+* [x] - x86\_64 instruction encoding
+	* [x] - add-like
+	* [x] - ret
+	* [ ] - call
+	* [ ] - jmp
+	* [ ] - syscall
+* [ ] - codegen
+	* [ ] - everything on the stack
+	* [ ] - use regs
+	* [ ] - basic types prelude
+		* [ ] - non-builtin string
+	* [ ] - debug info
+* [ ] - more arches
+	* [ ] - Z80/Gameboy
+	* [ ] - RISC-V
+	* [ ] - arm
+
